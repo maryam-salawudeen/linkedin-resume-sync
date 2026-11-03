@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkedIn fields · __TITLE__</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1d2433; --muted: #5d6779; --line: #dfe3ea;
+    --accent: #0a66c2; --accent-ink: #ffffff; --new: #0f7b4a; --new-bg: #e5f5ec;
+    --changed: #9a5b00; --changed-bg: #fff3dc; --warn: #b42318; --warn-bg: #fdecea;
+    --code: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --ink: #e6e9ef; --muted: #9aa3b2; --line: #2d3442;
+      --accent: #5aa7f0; --accent-ink: #0b1220; --new: #6fd3a0; --new-bg: #173226;
+      --changed: #f2b85b; --changed-bg: #3a2c12; --warn: #ff8a80; --warn-bg: #3b1d1b;
+      --code: #232936;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 80px; }
+  header h1 { margin: 0 0 4px; font-size: 24px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .bar { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 12px 0;
+         display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); }
+  .bar .count { font-weight: 600; margin-right: auto; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 4px; }
+  nav a { color: var(--accent); text-decoration: none; font-size: 13px; padding: 3px 8px;
+          border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+  button { font: inherit; font-size: 13px; cursor: pointer; border-radius: 6px; padding: 5px 10px;
+           border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.copied { background: var(--new-bg); color: var(--new); border-color: var(--new); }
+  label.toggle { font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  section { margin-top: 28px; }
+  section > h2 { font-size: 18px; margin: 0; }
+  .where { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .card.done { opacity: .55; }
+  .card-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .card-head h3 { font-size: 15px; margin: 0; margin-right: auto; }
+  .badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+           padding: 2px 7px; border-radius: 4px; }
+  .badge.new { background: var(--new-bg); color: var(--new); }
+  .badge.changed { background: var(--changed-bg); color: var(--changed); }
+  .badge.skip { background: var(--warn-bg); color: var(--warn); }
+  .field { border-top: 1px solid var(--line); padding: 10px 0 4px; }
+  .field:first-of-type { border-top: 0; }
+  .field-head { display: flex; gap: 8px; align-items: center; }
+  .field-head .label { font-weight: 600; font-size: 13px; margin-right: auto; }
+  .chars { font-size: 12px; color: var(--muted); }
+  .chars.over { color: var(--warn); font-weight: 700; }
+  .value { white-space: pre-wrap; background: var(--code); border-radius: 6px; padding: 8px 10px;
+           margin: 6px 0; font-size: 14px; overflow-wrap: anywhere; }
+  .value.empty { color: var(--muted); font-style: italic; background: transparent; padding-left: 0; }
+  .field.changed .value { outline: 2px solid var(--changed); }
+  .note { font-size: 13px; color: var(--muted); }
+  details.old { font-size: 13px; color: var(--muted); }
+  details.old .value { text-decoration: line-through; opacity: .8; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 13px; padding: 4px 10px; border-radius: 999px; }
+  .chip.new { border-color: var(--new); }
+  .chip.done { text-decoration: line-through; opacity: .5; }
+  .group { font-size: 12px; color: var(--muted); margin: 12px 0 6px; font-weight: 600; }
+  .removed { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 12px 14px; }
+  .removed ul { margin: 6px 0 0; padding-left: 20px; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  body.only-changes .card.same, body.only-changes .chip.same,
+  body.only-changes section.all-same { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>LinkedIn fields</h1>
+    <div class="meta" id="meta"></div>
+  </header>
+  <div class="bar">
+    <span class="count" id="count"></span>
+    <label class="toggle"><input type="checkbox" id="only"> Only show changes</label>
+    <button id="chrome" title="Copies a prompt for Claude in Chrome with the new and changed fields">Copy for Claude in Chrome</button>
+  </div>
+  <nav id="nav"></nav>
+  <div id="removed"></div>
+  <main id="main"></main>
+  <footer>
+    Tick “Done” on each card as you save it on LinkedIn. When the profile matches,
+    run <code>python3 sync.py --done</code> so the next run only shows what changed after today.
+  </footer>
+</div>
+<script id="data" type="application/json">/*__DATA__*/null</script>
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v ? localStorage.setItem(k, "1") : localStorage.removeItem(k); } catch {} },
+};
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k.startsWith("on")) n[k] = v; else n.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) n.append(kid);
+  return n;
+};
+const hash = s => { let h = 0; for (const c of s) h = (h * 31 + c.codePointAt(0)) | 0; return (h >>> 0).toString(36); };
+
+async function copy(text, btn) {
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const t = el("textarea"); t.value = text; document.body.append(t); t.select();
+    document.execCommand("copy"); t.remove();
+  }
+  if (btn) {
+    const was = btn.textContent; btn.textContent = "Copied"; btn.classList.add("copied");
+    setTimeout(() => { btn.textContent = was; btn.classList.remove("copied"); }, 1200);
+  }
+}
+
+const isChanged = e => e.status !== "same" && !e.skip;
+const m = DATA.meta;
+document.getElementById("meta").textContent =
+  `From ${m.resume} · built ${m.built}` + (m.since ? ` · compared with what you marked done on ${m.since}` : " · first run");
+document.getElementById("count").textContent = m.since
+  ? `${m.changed} new or changed · ${DATA.removed.length} removed`
+  : "First run: every field is new";
+const only = document.getElementById("only");
+only.checked = !!m.since && m.changed > 0;
+document.body.classList.toggle("only-changes", only.checked);
+only.onchange = () => document.body.classList.toggle("only-changes", only.checked);
+
+if (DATA.removed.length) {
+  document.getElementById("removed").append(el("div", { class: "removed" },
+    el("strong", {}, "Gone from your résumé. Delete or edit these on LinkedIn:"),
+    el("ul", {}, DATA.removed.map(r => el("li", {}, `${r.section}: ${r.title}`)))));
+}
+
+const nav = document.getElementById("nav"), main = document.getElementById("main");
+for (const s of DATA.sections) {
+  const changes = s.entries.filter(isChanged).length;
+  nav.append(el("a", { href: `#${s.id}` }, s.title + (m.since && changes ? ` (${changes})` : "")));
+  const sec = el("section", { id: s.id, class: changes ? "" : "all-same" },
+    el("h2", {}, s.title), el("div", { class: "where" }, s.where));
+
+  if (s.kind === "chips") {
+    sec.append(el("div", { class: "note" }, "Click a skill to copy it, then paste it into LinkedIn's skill box."));
+    let group = null, box = null;
+    for (const e of s.entries) {
+      if (e.group !== group) { group = e.group; sec.append(el("div", { class: "group" }, group)); box = el("div", { class: "chips" }); sec.append(box); }
+      const k = `done:${s.id}:${e.key}`;
+      const chip = el("button", { class: `chip ${e.status}` + (store.get(k) ? " done" : ""), title: "Copy (right-click to mark done)" }, e.title);
+      chip.onclick = () => copy(e.title, chip);
+      chip.oncontextmenu = ev => { ev.preventDefault(); chip.classList.toggle("done"); store.set(k, chip.classList.contains("done")); };
+      box.append(chip);
+    }
+    main.append(sec);
+    continue;
+  }
+
+  for (const e of s.entries) {
+    const k = `done:${s.id}:${e.key}:${hash(JSON.stringify(e.fields.map(f => f.value)))}`;
+    const card = el("div", { class: `card ${e.skip ? "same" : e.status}` + (store.get(k) ? " done" : "") });
+    const done = el("input", { type: "checkbox" }); done.checked = !!store.get(k);
+    done.onchange = () => { card.classList.toggle("done", done.checked); store.set(k, done.checked); };
+    card.append(el("div", { class: "card-head" },
+      el("h3", {}, e.title),
+      e.skip ? el("span", { class: "badge skip" }, "don't add") : e.status !== "same" ? el("span", { class: `badge ${e.status}` }, e.status) : null,
+      el("label", { class: "toggle" }, done, "Done")));
+    for (const f of e.fields) {
+      const n = [...f.value].length, over = f.limit && n > f.limit;
+      const btn = el("button", {}, "Copy");
+      btn.onclick = () => copy(f.value, btn);
+      card.append(el("div", { class: `field ${f.status}` },
+        el("div", { class: "field-head" },
+          el("span", { class: "label" }, f.label),
+          f.limit ? el("span", { class: "chars" + (over ? " over" : "") }, `${n} / ${f.limit}`) : null,
+          f.value ? btn : null),
+        f.value ? el("div", { class: "value" }, f.value) : el("div", { class: "value empty" }, "Nothing to paste"),
+        f.note ? el("div", { class: "note" }, f.note) : null,
+        over ? el("div", { class: "note", style: "color:var(--warn)" }, "Over LinkedIn's limit. Trim it before pasting.") : null,
+        f.status === "changed" ? el("details", { class: "old" }, el("summary", {}, "What it was before"),
+          el("div", { class: "value" }, f.old || "(empty)")) : null));
+    }
+    sec.append(card);
+  }
+  main.append(sec);
+}
+
+document.getElementById("chrome").onclick = ev => {
+  const lines = [
+    "Please help me update my LinkedIn profile in this browser tab. I'm signed in already.",
+    "Open each form listed below and fill in the fields with the exact text given.",
+    "Do not click Save, Post, Done or any button that publishes. Stop after each form so I can check it and click Save myself.",
+    "Leave the \"Notify network\" or \"Share with network\" switch off.",
+    "Skip any field marked \"leave as is\". Never type anything that isn't below.",
+    "",
+  ];
+  for (const s of DATA.sections) {
+    const entries = s.entries.filter(e => !e.skip && (!m.since || isChanged(e)));
+    if (!entries.length) continue;
+    lines.push(`## ${s.title} (${s.where})`);
+    if (s.kind === "chips") { lines.push("Add these skills one at a time: " + entries.map(e => e.title).join("; "), ""); continue; }
+    for (const e of entries) {
+      lines.push(`### ${e.title}${e.status === "changed" ? " (edit the existing one)" : " (add new)"}`);
+      for (const f of e.fields) lines.push(`- ${f.label}: ${f.value ? f.value.replace(/\n/g, "\n  ") : "leave as is"}` +
+        (!f.value && f.note ? ` (${f.note})` : ""));
+      lines.push("");
+    }
+  }
+  if (DATA.removed.length) {
+    lines.push("## Ask me before touching these. They're no longer on my résumé:");
+    for (const r of DATA.removed) lines.push(`- ${r.section}: ${r.title}`);
+  }
+  copy(lines.join("\n"), ev.currentTarget);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Generated from the résumé on each run. Keep personal data out of git.
+out/
+state/
+__pycache__/
+.DS_Store
